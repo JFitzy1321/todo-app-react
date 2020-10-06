@@ -3,26 +3,34 @@ import "./App.css";
 import Form from "./components/Form";
 import TodoList from "./components/TodoList";
 
-function App() {
-  const [todos, setTodos] = useState([]);
-  const [filter, setFilter] = useState("all");
+function useLocalStorageState(key, initialValue) {
+  const [storedValue, setStoreValue] = useState(() => {
+    try {
+      const item = localStorage.getItem(key);
+      return item ? JSON.parse(item) : initialValue;
+    } catch (error) {
+      console.log(error);
+      return initialValue;
+    }
+  });
 
-  useEffect(() => {
-    getLocalTodos();
-  }, []);
-
-  const getLocalTodos = () => {
-    if (localStorage.getItem("todos") === null) {
-      localStorage.setItem("todos", JSON.stringify([]));
-    } else {
-      const localTodos = JSON.parse(localStorage.getItem("todos"));
-      setTodos(localTodos);
+  const setValue = (value) => {
+    try {
+      const valuetoStore =
+        value instanceof Function ? value(storedValue) : value;
+      setStoreValue(valuetoStore);
+      localStorage.setItem(key, JSON.stringify(valuetoStore));
+    } catch (error) {
+      console.log(error);
     }
   };
 
-  const saveLocalTodos = () => {
-    localStorage.setItem("todos", JSON.stringify(todos));
-  };
+  return [storedValue, setValue];
+}
+
+function App() {
+  const [todos, setTodos] = useLocalStorageState("todos", []);
+  const [filter, setFilter] = useState("all");
 
   const filterTodos = useCallback(
     (todos) => {
@@ -74,7 +82,6 @@ function App() {
 
   useEffect(() => {
     setTodos((prevState) => filterTodos([...prevState]));
-    saveLocalTodos();
   }, [filter, filterTodos]);
 
   const onSubmitHandler = (newTodo) => {
